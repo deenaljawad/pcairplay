@@ -1488,7 +1488,15 @@ try {
     # double-click, and that must not raise a dialog.
     $ui.MinBtn.Add_Click({ try { $window.WindowState = 'Minimized' } catch {} })
     $ui.CloseBtn.Add_Click({ try { $window.Close() } catch {} })
-    $ui.TitleBar.Add_MouseLeftButtonDown({ try { $window.DragMove() } catch {} })
+    $ui.TitleBar.Add_MouseLeftButtonDown({
+        # DragMove is a modal move loop that still dispatches timer ticks, so
+        # the poll's heavy ~12 s tick (IP + Bonjour CIM queries, 100-500 ms on
+        # this thread) landing mid-drag froze the window under the cursor
+        # (user-reported). Pause the poll for the duration of the drag.
+        try { $timer.Stop() } catch {}
+        try { $window.DragMove() } catch {}
+        finally { try { $timer.Start() } catch {} }
+    })
 
     # Keyboard: Esc closes. Enter fires the primary action through StartBtn's
     # IsDefault - handling Enter here as well would fire it twice.

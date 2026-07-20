@@ -766,6 +766,12 @@ removed regardless, on the perceived-sharpness grounds above.
   `4294967295`. Regression-test any change here with a same-subnet IP *and* a
   deliberately foreign one; a check that only ever passes looks identical to a
   check that works.
+- **`DragMove()` dispatches timer ticks inside its modal move loop.** A
+  DispatcherTimer tick that does slow work on the UI thread (CIM queries,
+  `Get-NetTCPConnection`) lands mid-drag and freezes the window under the
+  cursor for its duration — reported as "moving the window lags for a
+  second". Pause polls around DragMove; better, keep heavy work off the UI
+  thread entirely.
 - **WPF triggers cannot target `GradientStop` by name.** `<Setter TargetName="g1"
   Property="Color">` where `g1` is a GradientStop throws a `KeyNotFoundException`
   wrapped in "Initialization of 'System.Windows.Setter' threw an exception" —
