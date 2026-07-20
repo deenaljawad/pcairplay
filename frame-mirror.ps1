@@ -176,7 +176,7 @@ public static class FrameNative
 $bezelXaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PC AirPlay - Framed Mirror"
+        Title="AirPlayPC - Framed Mirror"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" ShowInTaskbar="True" SizeToContent="Manual"
         UseLayoutRounding="True" SnapsToDevicePixels="True">
@@ -219,7 +219,7 @@ $bezelXaml = @'
 $overlayXaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PC AirPlay - Frame Overlay"
+        Title="AirPlayPC - Frame Overlay"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False"
         UseLayoutRounding="True">
@@ -549,7 +549,7 @@ if (-not $script:MutexCreated) {
     if (-not $Quiet) {
         [System.Windows.MessageBox]::Show(
             'The framed mirror is already running - look for its window (it may be behind others).',
-            'PC AirPlay', 'OK', 'Information') | Out-Null
+            'AirPlayPC', 'OK', 'Information') | Out-Null
     }
     exit 0
 }
@@ -1025,7 +1025,7 @@ function Invoke-FrameTick {
         $procs = @(Get-Process -Name uxplay -ErrorAction SilentlyContinue)
         if ($procs.Count -eq 0) {
             $script:PhoneSince = $null
-            $ui.WaitDetail.Text = "Engine not running - press Start in PC AirPlay first"
+            $ui.WaitDetail.Text = "Engine not running - press Start in AirPlayPC first"
             return
         }
 

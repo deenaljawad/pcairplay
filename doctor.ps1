@@ -87,7 +87,7 @@ function Get-EngineListeningPort {
       Select-Object -ExpandProperty LocalPort -Unique | Sort-Object)
 }
 
-Write-Host "PC AirPlay - diagnostics" -ForegroundColor White
+Write-Host "AirPlayPC - diagnostics" -ForegroundColor White
 
 # --- 1. UxPlay present ----------------------------------------------------
 Write-Head "1. UxPlay installed"
@@ -241,7 +241,7 @@ foreach ($rule in @(Get-PCAirPlayPortRule)) {
 # Block beats Allow in Windows Firewall, so a single stray block rule defeats
 # every Allow rule above and nothing else in this script would notice. The usual
 # source is a dismissed "Windows Security Alert" - easy to miss here because
-# airplay-ui.ps1 minimises the engine console and "AirPlay UI.cmd" hides its own.
+# airplay-ui.ps1 minimises the engine console and "AirPlayPC.cmd" hides its own.
 $blockRules = @(Get-NetFirewallRule -Direction Inbound -Action Block -Enabled True -ErrorAction SilentlyContinue)
 $blockHits = @()
 if ($blockRules.Count -gt 0) {
@@ -394,7 +394,7 @@ if ($engineProcs.Count -eq 0) {
         # Two fresh samples, two seconds apart, both empty: the engine really is
         # stuck. This is the documented stall - it is a hard blocker, not a Warn.
         Fail "uxplay.exe is running but is not listening on any TCP port." `
-             "It never bound its RTSP socket, so it has not registered over mDNS either. The usual cause is launching it without a real console (a PowerShell background job), where it stalls before initialising GStreamer. Close it and start it with .\start-airplay.ps1 or 'AirPlay UI.cmd'."
+             "It never bound its RTSP socket, so it has not registered over mDNS either. The usual cause is launching it without a real console (a PowerShell background job), where it stalls before initialising GStreamer. Close it and start it with .\start-airplay.ps1 or 'AirPlayPC.cmd'."
     }
 }
 

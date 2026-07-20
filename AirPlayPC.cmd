@@ -1,7 +1,7 @@
 @echo off
-rem Double-click launcher for the PC AirPlay UI - no console window.
+rem Double-click launcher for the AirPlayPC UI - no console window.
 rem
-rem Prefer "AirPlay UI.vbs": a .cmd unavoidably flashes its own console when
+rem Prefer "AirPlayPC.vbs": a .cmd unavoidably flashes its own console when
 rem double-clicked, and powershell's console exists for a beat before
 rem -WindowStyle Hidden takes effect ("start /min" below keeps that beat off
 rem the foreground, but it still blips the taskbar). The .vbs starts the same
@@ -27,4 +27,4 @@ rem parse and nothing happens at all. Verified: the inlined form ran nothing and
 rem showed nothing from such a path. "set" quotes the value, so & and spaces in
 rem the path are safe too.
 set "PCAIRPLAY_UI=%~dp0airplay-ui.ps1"
-start "" /min powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "$ErrorActionPreference='Continue'; try { Add-Type -AssemblyName PresentationFramework; & $env:PCAIRPLAY_UI; if ($LASTEXITCODE) { throw ('airplay-ui.ps1 exited with code ' + $LASTEXITCODE + '.') } } catch { $m = 'PC AirPlay failed to start.' + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message; try { Set-Content -LiteralPath ($env:TEMP + '\pcairplay-crash.log') -Value ($m + [Environment]::NewLine + $_.ScriptStackTrace) } catch { }; try { [void][System.Windows.MessageBox]::Show($m, 'PC AirPlay', 'OK', 'Error') } catch { }; exit 1 }"
+start "" /min powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "$ErrorActionPreference='Continue'; try { Add-Type -AssemblyName PresentationFramework; & $env:PCAIRPLAY_UI; if ($LASTEXITCODE) { throw ('airplay-ui.ps1 exited with code ' + $LASTEXITCODE + '.') } } catch { $m = 'AirPlayPC failed to start.' + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message; try { Set-Content -LiteralPath ($env:TEMP + '\pcairplay-crash.log') -Value ($m + [Environment]::NewLine + $_.ScriptStackTrace) } catch { }; try { [void][System.Windows.MessageBox]::Show($m, 'AirPlayPC', 'OK', 'Error') } catch { }; exit 1 }"

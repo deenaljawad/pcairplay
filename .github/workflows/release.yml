@@ -46,14 +46,14 @@ jobs:
         run: |
           $files = 'uxplay-common.ps1', 'setup.ps1', 'start-airplay.ps1',
                    'airplay-ui.ps1', 'frame-mirror.ps1', 'doctor.ps1',
-                   'AirPlay UI.vbs', 'AirPlay UI.cmd', 'Diagnostics.cmd',
+                   'AirPlayPC.vbs', 'AirPlayPC.cmd', 'Diagnostics.cmd',
                    'Framed Mirror.cmd', 'README.md', 'LICENSE', 'pcairplay.ico'
-          Compress-Archive -Path $files -DestinationPath "pcairplay-${{ steps.ver.outputs.version }}.zip"
+          Compress-Archive -Path $files -DestinationPath "AirPlayPC-${{ steps.ver.outputs.version }}.zip"
 
       - name: SHA256SUMS
         shell: powershell
         run: |
-          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item pcairplay-*.zip)
+          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item AirPlayPC-*.zip)
           $lines = foreach ($f in $items) {
             '{0}  {1}' -f (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $f.Name
           }
@@ -66,6 +66,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $exe = (Get-Item installer\Output\*.exe).FullName
-          $zip = (Get-Item pcairplay-*.zip).FullName
-          gh release create "${{ github.ref_name }}" $exe $zip SHA256SUMS.txt --title "pcairplay ${{ steps.ver.outputs.version }}" --generate-notes
+          $zip = (Get-Item AirPlayPC-*.zip).FullName
+          gh release create "${{ github.ref_name }}" $exe $zip SHA256SUMS.txt --title "AirPlayPC ${{ steps.ver.outputs.version }}" --generate-notes
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Desktop UI for the PC AirPlay receiver.
+    Desktop UI for the AirPlayPC receiver.
 .DESCRIPTION
     A small WPF front-end over the UxPlay engine: start/stop the receiver, pick
     quality and latency mode, see live status. No dependencies beyond Windows
-    and UxPlay itself. Double-click "AirPlay UI.cmd" to launch without a console.
+    and UxPlay itself. Double-click "AirPlayPC.cmd" to launch without a console.
 
     Visual direction is deliberately tvOS: near-black, wide-spaced, one large
     focal status element you can read from across the room, and controls that
@@ -45,7 +45,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# PresentationFramework first, before anything that can fail: "AirPlay UI.cmd"
+# PresentationFramework first, before anything that can fail: "AirPlayPC.cmd"
 # launches with -WindowStyle Hidden, so a MessageBox is the only channel an
 # error has to reach the user at all.
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
@@ -121,7 +121,7 @@ try {
             $problem = "UxPlay is not installed.`n`nRun setup.ps1 as Administrator first."
         }
         if (-not $SelfTest) {
-            [System.Windows.MessageBox]::Show($problem, 'PC AirPlay', 'OK', 'Error') | Out-Null
+            [System.Windows.MessageBox]::Show($problem, 'AirPlayPC', 'OK', 'Error') | Out-Null
             exit 1
         }
         # -SelfTest must never block on a modal box in a non-interactive shell,
@@ -147,7 +147,7 @@ try {
     [xml]$xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PC AirPlay" Width="524" SizeToContent="Height"
+        Title="AirPlayPC" Width="524" SizeToContent="Height"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI Variable Display, Segoe UI Variable Text, Segoe UI"
@@ -430,7 +430,7 @@ try {
 
       <!-- Title bar (drag handle) -->
       <Grid x:Name="TitleBar" Height="30" Background="#00000000">
-        <TextBlock Text="AirPlay" Foreground="#6E6E73" FontSize="12"
+        <TextBlock Text="AirPlayPC" Foreground="#6E6E73" FontSize="12"
                    FontWeight="SemiBold" VerticalAlignment="Center"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
           <Button x:Name="MinBtn" Style="{StaticResource WinBtn}" Content="&#x2500;"
@@ -978,7 +978,7 @@ try {
             "Another AirPlay receiver is already running on this PC:`n`n    $names`n`n" +
             "It holds the AirPlay port and shows up as a second device in the iPhone's " +
             "mirroring list, so you may pick the wrong one.`n`nClose it now?",
-            'PC AirPlay - conflict', 'YesNoCancel', 'Warning')
+            'AirPlayPC - conflict', 'YesNoCancel', 'Warning')
 
         if ($answer -eq 'Cancel') { return $false }
         if ($answer -eq 'Yes') {
@@ -1014,7 +1014,7 @@ try {
         # Start path only.
         $r = Resolve-UxPlayDeviceName -Name $ui.NameBox.Text
         if (-not $r.Error) { return $true }
-        [System.Windows.MessageBox]::Show($r.Error, 'PC AirPlay - name', 'OK', 'Warning') | Out-Null
+        [System.Windows.MessageBox]::Show($r.Error, 'AirPlayPC - name', 'OK', 'Warning') | Out-Null
         $false
     }
 
@@ -1107,7 +1107,7 @@ try {
         )
         $q = { param($s) "'" + ([string]$s -replace "'", "''") + "'" }
         $run = "& $(& $q $Exe) @($(@($Tokens | ForEach-Object { & $q $_ }) -join ', '))"
-        $inner = "`$Host.UI.RawUI.WindowTitle = 'PC AirPlay engine'; `$ErrorActionPreference = 'Continue'; "
+        $inner = "`$Host.UI.RawUI.WindowTitle = 'AirPlayPC engine'; `$ErrorActionPreference = 'Continue'; "
         if ($LogPath) {
             # 2>&1 through Tee, exactly like the CLI: stderr arrives reformatted
             # as NativeCommandError noise, which is documented and benign.
@@ -1345,7 +1345,7 @@ try {
         # Before Start-Process: if the sink fell back, say so while the user is
         # still looking at the button they just pressed.
         foreach ($note in $script:lastNotes) {
-            [System.Windows.MessageBox]::Show($note, 'PC AirPlay', 'OK', 'Information') | Out-Null
+            [System.Windows.MessageBox]::Show($note, 'AirPlayPC', 'OK', 'Information') | Out-Null
         }
 
         # The log path is chosen BEFORE launch so the wrapper can append the
@@ -1463,7 +1463,7 @@ try {
             if (-not $alive) { $script:proc = $null }
             [System.Windows.MessageBox]::Show(
                 "Could not start the receiver:`n`n$($_.Exception.Message)",
-                'PC AirPlay', 'OK', 'Error') | Out-Null
+                'AirPlayPC', 'OK', 'Error') | Out-Null
         }
         # Outside the try, so a display failure cannot be mistaken for a launch
         # failure and the UI always resyncs to the real process state.
@@ -1479,7 +1479,7 @@ try {
         } catch {
             [System.Windows.MessageBox]::Show(
                 "Could not launch diagnostics:`n`n$($_.Exception.Message)",
-                'PC AirPlay', 'OK', 'Error') | Out-Null
+                'AirPlayPC', 'OK', 'Error') | Out-Null
         }
     })
 
@@ -1607,7 +1607,7 @@ try {
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
             $script:notifyIcon = New-Object System.Windows.Forms.NotifyIcon
             $script:notifyIcon.Icon = New-Object System.Drawing.Icon $script:appIconPath
-            $script:notifyIcon.Text = 'PC AirPlay'
+            $script:notifyIcon.Text = 'AirPlayPC'
             $script:notifyIcon.Visible = $true
 
             $script:notifyIcon.add_MouseClick({
@@ -1616,7 +1616,7 @@ try {
             })
 
             $trayMenu = New-Object System.Windows.Forms.ContextMenuStrip
-            $trayOpen = $trayMenu.Items.Add('Open PC AirPlay')
+            $trayOpen = $trayMenu.Items.Add('Open AirPlayPC')
             $trayOpen.Font = New-Object System.Drawing.Font $trayOpen.Font, ([System.Drawing.FontStyle]::Bold)
             $trayOpen.add_Click({ & $script:trayRestore })
             [void]$trayMenu.Items.Add('-')
@@ -2050,8 +2050,8 @@ try {
         Write-Host $_.ScriptStackTrace
     } else {
         [System.Windows.MessageBox]::Show(
-            "PC AirPlay hit an unexpected error and has to close:`n`n$detail",
-            'PC AirPlay', 'OK', 'Error') | Out-Null
+            "AirPlayPC hit an unexpected error and has to close:`n`n$detail",
+            'AirPlayPC', 'OK', 'Error') | Out-Null
     }
 }
 

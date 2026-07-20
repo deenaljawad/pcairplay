@@ -7,10 +7,12 @@
     32-bit BGRA BMP entries with AND masks - the only combination every
     Windows consumer (Explorer, taskbar, tray, Inno Setup) renders correctly.
 
-    Design: near-black rounded square matching the UI's tvOS-dark look, a
-    light iPhone outline, and three cyan-to-blue arcs radiating from it -
-    "this screen, streamed" - deliberately NOT Apple's AirPlay glyph
-    (rectangle + triangle), which is their trademark.
+    Design: near-black rounded square matching the UI's tvOS-dark look, with
+    the UI's own hero mark - the AirPlay glyph (screen outline with the
+    triangle rising through its bottom edge) - centered in white. Same path
+    data as GlyphIdle/GlyphLive in airplay-ui.ps1; keep them in sync.
+    (Explicit user decision 2026-07-20 to brand with this glyph, replacing
+    the earlier phone-outline-plus-arcs design.)
 #>
 param(
     [string]$OutPath
@@ -55,38 +57,24 @@ function New-IconSource([int]$Size) {
     [void]$sheen.GradientStops.Add((New-Object System.Windows.Media.GradientStop (New-Color '#00FFFFFF'), 0.42))
     $dc.DrawRoundedRectangle($sheen, $null, (New-Object System.Windows.Rect 2, 2, 252, 252), 56, 56)
 
-    # iPhone outline, shifted left to make room for the stream arcs.
-    $phonePen = New-Object System.Windows.Media.Pen (New-VerticalBrush '#F4F6FA' '#A6AEBD'), 13
-    $phonePen.LineJoin = 'Round'
-    $dc.DrawRoundedRectangle($null, $phonePen, (New-Object System.Windows.Rect 56, 56, 86, 144), 22, 22)
-
-    # Three arcs radiating right: cyan -> azure, fading with distance.
-    $cx = 164.0; $cy = 128.0
-    $arcBrushColors = @('#3FE0FF', '#44B8FF', '#4C7DFF')
-    $radii = @(38.0, 64.0, 90.0)
-    $opac  = @(1.0, 0.85, 0.68)
-    for ($i = 0; $i -lt 3; $i++) {
-        $r = $radii[$i]
-        $a = 40.0 * [Math]::PI / 180.0
-        $p1 = New-Object System.Windows.Point ($cx + $r * [Math]::Cos($a)), ($cy - $r * [Math]::Sin($a))
-        $p2 = New-Object System.Windows.Point ($cx + $r * [Math]::Cos($a)), ($cy + $r * [Math]::Sin($a))
-        $fig = New-Object System.Windows.Media.PathFigure
-        $fig.StartPoint = $p1
-        $seg = New-Object System.Windows.Media.ArcSegment
-        $seg.Point = $p2
-        $seg.Size = New-Object System.Windows.Size $r, $r
-        $seg.SweepDirection = 'Clockwise'
-        $seg.IsLargeArc = $false
-        [void]$fig.Segments.Add($seg)
-        $geo = New-Object System.Windows.Media.PathGeometry
-        [void]$geo.Figures.Add($fig)
-
-        $brush = New-Object System.Windows.Media.SolidColorBrush (New-Color $arcBrushColors[$i])
-        $brush.Opacity = $opac[$i]
-        $pen = New-Object System.Windows.Media.Pen $brush, 15
-        $pen.StartLineCap = 'Round'; $pen.EndLineCap = 'Round'
-        $dc.DrawGeometry($null, $pen, $geo)
-    }
+    # The AirPlay glyph, exactly as the UI's hero mark draws it (52x52 box:
+    # screen outline x 2..50 / y 3..36 with the bottom gap, triangle apex at
+    # y 30 poking through). Bounds center (26, 26.5); scale + translate so it
+    # sits optically centered at ~63% of the tile.
+    $glyphScreen = [System.Windows.Media.Geometry]::Parse(
+        'M 19,36 H 7 A 5,5 0 0 1 2,31 V 8 A 5,5 0 0 1 7,3 H 45 A 5,5 0 0 1 50,8 V 31 A 5,5 0 0 1 45,36 H 33')
+    $glyphTriangle = [System.Windows.Media.Geometry]::Parse('M 26,30 L 42,50 L 10,50 Z')
+    $k = 3.4
+    $dc.PushTransform((New-Object System.Windows.Media.TranslateTransform (128 - 26 * $k), (128 - 26.5 * $k)))
+    $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform $k, $k))
+    $white = New-Object System.Windows.Media.SolidColorBrush (New-Color '#FFFFFF')
+    # 3.0 glyph units = ~10 px at 256: reads at 16 px where the UI's 2.4 would thin out.
+    $glyphPen = New-Object System.Windows.Media.Pen $white, 3.0
+    $glyphPen.StartLineCap = 'Round'; $glyphPen.EndLineCap = 'Round'; $glyphPen.LineJoin = 'Round'
+    $dc.DrawGeometry($null, $glyphPen, $glyphScreen)
+    $dc.DrawGeometry($white, $null, $glyphTriangle)
+    $dc.Pop()
+    $dc.Pop()
 
     $dc.Pop()
     $dc.Close()

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    One-time setup for the PC AirPlay receiver. Run as Administrator.
+    One-time setup for the AirPlayPC receiver. Run as Administrator.
 .DESCRIPTION
     Installs the UxPlay engine, verifies the mDNS responder it depends on, and
     opens the firewall so an iPhone can discover and mirror to this PC.
@@ -90,7 +90,7 @@ if (-not $isAdmin -and $WhatIfPreference) {
 # points at them. Absent rules are reported, not treated as errors, so the
 # installer's uninstaller can run this unconditionally.
 if ($Uninstall) {
-    Write-Step "Removing PC AirPlay firewall rules"
+    Write-Step "Removing AirPlayPC firewall rules"
 
     $ruleNames = @((Get-PCAirPlayPortRule).Name) + @(Get-PCAirPlayProgramRuleName)
     foreach ($n in $ruleNames) {
@@ -648,7 +648,7 @@ Write-Host @"
       1. Run  .\doctor.ps1        to verify network reachability
       2. Start the receiver:
            .\start-airplay.ps1     (command line)
-           "AirPlay UI.cmd"        (desktop UI - just double-click it)
+           "AirPlayPC.cmd"        (desktop UI - just double-click it)
       3. On the iPhone: Control Center -> Screen Mirroring -> pick this PC
 
     Both devices must be on the SAME network/subnet. If the PC never appears,

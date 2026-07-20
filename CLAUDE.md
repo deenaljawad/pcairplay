@@ -1,6 +1,15 @@
-# pcairplay — context for Claude Code
+# AirPlayPC (repo `pcairplay`) — context for Claude Code
 
 ## What this is
+
+**The user-facing name is AirPlayPC everywhere** (rebranded 2026-07-20):
+window title, tray, MessageBoxes, shortcuts, installer, README, launcher file
+names (`AirPlayPC.vbs` / `AirPlayPC.cmd`), release artifacts. Deliberately NOT
+renamed: the repo/URL (`pcairplay`), `%LOCALAPPDATA%\pcairplay` (settings and
+log continuity), the firewall rule names (`PCAirPlay - …`; renaming would
+strand rules on existing installs), the `gbulog.pcairplay` AppUserModelID
+(pinned-taskbar identity), shared function names (`*-PCAirPlay*`), mutex
+names, and `pcairplay.ico` / `pcairplay.iss` file names.
 
 A thin Windows wrapper around **UxPlay**, an open-source AirPlay mirroring
 receiver. The goal: mirror an iPhone screen to a Windows PC using **native iOS
@@ -31,8 +40,8 @@ machine-identifying THERE, never here: this file is public.
 | `setup.ps1` | One-time, **needs Administrator**. Installs UxPlay **1.72.1-3** (see *The 1.x / 2.x split*), checks Bonjour, opens firewall ports. `-WhatIf` previews without elevation. |
 | `start-airplay.ps1` | Starts the receiver. Normal user, no elevation. `-DryRun` prints the argv without launching. |
 | `airplay-ui.ps1` | WPF desktop UI over the same engine. Owns the framed view's lifecycle (opens it with the UI, closes it on exit), persists settings, displays the PIN, single-instance. `-SelfTest` builds the window, asserts layout and the generated argv, and exits — run it after any edit here. |
-| `AirPlay UI.vbs` | **Preferred double-click launcher for the UI** — zero window flashes (WScript starts the powershell console hidden from birth; a `.cmd` cannot avoid flashing its own). |
-| `AirPlay UI.cmd` | Fallback launcher for the UI, for machines with Windows Script Host disabled. Flashes a console briefly. |
+| `AirPlayPC.vbs` | **Preferred double-click launcher for the UI** — zero window flashes (WScript starts the powershell console hidden from birth; a `.cmd` cannot avoid flashing its own). |
+| `AirPlayPC.cmd` | Fallback launcher for the UI, for machines with Windows Script Host disabled. Flashes a console briefly. |
 | `frame-mirror.ps1` | iPhone-chassis "simulator look" around the live mirror window: bezel, rounded screen corners, side buttons, shadow. Attaches to the engine's video window whenever one exists; single-instance; remembers position/zoom; has its own `-SelfTest`. Normally launched and closed **by the UI** (the "iPhone frame" switch). |
 | `Framed Mirror.cmd` | Double-click launcher for the framed view standalone — only needed next to a `start-airplay.ps1` console session; the UI manages the frame itself. |
 | `Diagnostics.cmd` | Double-click launcher for `doctor.ps1`, so diagnostics can't be blocked by ExecutionPolicy. |
@@ -41,6 +50,7 @@ machine-identifying THERE, never here: this file is public.
 | `.github/workflows/` | `ci.yml` — the real `setup.ps1` flow (engine download + firewall + teardown), both `-SelfTest`s, `-DryRun`, `-WhatIf` and an installer smoke-build on every push. `release.yml` — tag `v*` → build installer + scripts zip + `SHA256SUMS.txt`, publish the GitHub release. |
 | `pcairplay.ico` | The app icon — window/taskbar/tray, both shortcut sets, the setup exe, Apps & Features. **Regenerate with `tools/make-icon.ps1`, never hand-edit.** |
 | `tools/make-icon.ps1` | Vector-draws the icon with WPF and packs a proper multi-size .ico (256 px as a PNG entry, the rest as 32-bit BGRA BMP entries with AND masks). |
+| `tools/make-installer-art.ps1` | Vector-draws the installer's wizard bitmaps (`installer/wizard-*.bmp`: dark background, white AirPlay glyph, wordmark) that the .iss references. **Regenerate, never hand-edit the BMPs.** |
 
 `uxplay-common.ps1` is dot-sourced by all five scripts (including
 `frame-mirror.ps1`, which runs it under StrictMode 3 — keep it strict-clean)
@@ -565,7 +575,7 @@ the extra adapters but mDNS was not tested against them yet.
   verify pass passed everything — engine found, d3d11 sink present, all four
   firewall rules created and active.
 - `airplay-ui.ps1 -SelfTest` passes (31 elements bind); the UI launches cleanly
-  via `AirPlay UI.cmd`.
+  via `AirPlayPC.cmd`.
 - **First successful mirroring session ever (2026-07-20):** the iPhone found
   the PC in Screen Mirroring, connected, and video appeared on the PC.
   Note the video took a few seconds to appear after the phone showed "linked" —
@@ -737,7 +747,7 @@ removed regardless, on the perceived-sharpness grounds above.
    software problem from a network-topology one.
 3. If the phone is on a guest SSID: set up the USB tether above instead. Do it
    *before* the demo, not during — it needs a Store install and a Trust prompt.
-4. Launch `AirPlay UI.cmd`, press Start, mirror from the phone.
+4. Launch `AirPlayPC.cmd`, press Start, mirror from the phone.
 5. Update this section with what actually happened.
 
 ## Gotchas found the hard way
@@ -896,7 +906,7 @@ Public since 2026-07-20; the packaging decisions below are deliberate.
   SHA-256 in `setup.ps1` (`cb45de36…7986`) — the API digest alone would move
   with a swapped asset, so it only backstops releases newer than the pin.
 - **Releases:** tag `v<x.y.z>` on the public repo → `release.yml` builds
-  `pcairplay-setup-<x.y.z>.exe` + `pcairplay-<x.y.z>.zip` + `SHA256SUMS.txt`
+  `AirPlayPC-setup-<x.y.z>.exe` + `AirPlayPC-<x.y.z>.zip` + `SHA256SUMS.txt`
   and publishes the GitHub release. The exe is **unsigned**: SmartScreen shows
   "Windows protected your PC" until download reputation accrues — documented
   in the README. If that becomes a real adoption problem, Azure Trusted

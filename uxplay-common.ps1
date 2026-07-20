@@ -628,7 +628,7 @@ function Get-UxPlayEngineProcess {
 # strict-clean.
 
 function Get-FramedMirrorMutexName   { 'Local\PCAirPlay-FramedMirror' }
-function Get-FramedMirrorWindowTitle { 'PC AirPlay - Framed Mirror' }
+function Get-FramedMirrorWindowTitle { 'AirPlayPC - Framed Mirror' }
 
 function Initialize-PCAirPlayNative {
     <#
@@ -739,7 +739,7 @@ function Show-PCAirPlayUiWindow {
         double-clicked launcher surfaces the window that already exists
         instead of stacking a twin on top of it.
     #>
-    param([string]$Title = 'PC AirPlay')
+    param([string]$Title = 'AirPlayPC')
     if (-not (Initialize-PCAirPlayNative)) { return $false }
     $h = [PCAirPlayNative]::FindWindowByTitle($Title)
     if ($h -eq [IntPtr]::Zero) { return $false }

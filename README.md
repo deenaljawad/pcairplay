@@ -1,4 +1,4 @@
-# pcairplay
+# AirPlayPC
 
 Mirror an iPhone screen to a Windows PC using **native iOS Screen Mirroring** —
 no app on the phone.
@@ -35,10 +35,10 @@ diagnostic script that names the actual cause when it doesn't work.
 
 ### Option A — installer (recommended)
 
-Download **`pcairplay-setup-<version>.exe`** from the
+Download **`AirPlayPC-setup-<version>.exe`** from the
 [latest release](https://github.com/gbulog/pcairplay/releases/latest) and run
-it. It installs the scripts plus Start Menu shortcuts (**AirPlay UI**,
-**AirPlay Diagnostics**), then offers to run first-time setup — which
+it. It installs the scripts plus Start Menu shortcuts (**AirPlayPC**,
+**AirPlayPC Diagnostics**), then offers to run first-time setup — which
 downloads the UxPlay engine (pinned 1.72.1-3, SHA-256-checked against the
 upstream release) and opens the firewall. If Apple Bonjour is missing, setup
 says so and points at Apple's own installer — see *Requirements* above.
@@ -53,7 +53,7 @@ only the scripts in this repo; the engine comes from
 [uxplay-windows](https://github.com/leapbtw/uxplay-windows)'s own release at
 install time.
 
-To remove it later: **Settings → Apps → pcairplay**. The uninstaller also
+To remove it later: **Settings → Apps → AirPlayPC**. The uninstaller also
 removes the firewall rules; UxPlay and Bonjour keep their own Apps & Features
 entries.
 
@@ -71,8 +71,8 @@ powershell -ExecutionPolicy Bypass -File .\doctor.ps1
 
 # 3. Start the receiver — either one:
 powershell -ExecutionPolicy Bypass -File .\start-airplay.ps1
-#   ...or just double-click "AirPlay UI.vbs" for the desktop UI
-#   ("AirPlay UI.cmd" does the same; the .vbs opens with zero window flashes)
+#   ...or just double-click "AirPlayPC.vbs" for the desktop UI
+#   ("AirPlayPC.cmd" does the same; the .vbs opens with zero window flashes)
 ```
 
 Undo it all later with `setup.ps1 -Uninstall` (removes the firewall rules and
@@ -92,7 +92,7 @@ Then on the iPhone: **Control Center → Screen Mirroring → pick the PC**.
 `airplay-ui.ps1` is a self-contained WPF app over the same engine — device name,
 latency mode, resolution and framerate, fullscreen, the iPhone-style frame,
 share-safe video and PIN, one Start/Stop button, and a shortcut to the
-diagnostics. Double-click **`AirPlay UI.vbs`** to launch it — nothing else
+diagnostics. Double-click **`AirPlayPC.vbs`** to launch it — nothing else
 appears: no console windows, no taskbar blips, not even while the engine runs
 (it lives in a hidden console the UI manages).
 
