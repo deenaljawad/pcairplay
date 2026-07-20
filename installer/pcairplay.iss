@@ -79,7 +79,10 @@ Name: "{autodesktop}\AirPlay UI";    Filename: "{app}\AirPlay UI.vbs";  WorkingD
 ; Interactive installs: keep the console open (-NoExit) so what setup did -
 ; the engine download, the Bonjour verdict, the firewall result - can actually
 ; be read. nowait, or that console would hold the installer open forever.
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -NoExit -File ""{app}\setup.ps1"""; Description: "Run first-time setup now (downloads the UxPlay engine)"; Flags: nowait postinstall skipifsilent
+; runascurrentuser is REQUIRED: the postinstall flag implies runasoriginaluser
+; (de-elevated), and setup.ps1 then refuses with "must run as Administrator"
+; right at the finish line. Caught live on the first real install.
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -NoExit -File ""{app}\setup.ps1"""; Description: "Run first-time setup now (downloads the UxPlay engine)"; Flags: nowait postinstall skipifsilent runascurrentuser
 
 ; Silent installs (winget and friends): same setup, hidden and waited on, so a
 ; silent install still ends fully configured.
