@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The exact flow a new user runs: query upstream releases, download the
+      # pinned 1.x installer, verify its SHA-256 against the API digest, silent
+      # install, create the firewall rules (runner shells are elevated, so they
+      # really get created). Bonjour is absent on runners and cannot be
+      # redistributed, so its check is downgraded to a warning here.
+      - name: Real setup (engine download + firewall)
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -SkipBonjourCheck
+
+      - name: UI self-test
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\airplay-ui.ps1 -SelfTest
+
+      - name: Framed-mirror self-test
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\frame-mirror.ps1 -SelfTest
+
+      - name: CLI dry-run (argv construction)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\start-airplay.ps1 -DryRun
+
+      - name: Setup preview (-WhatIf)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -WhatIf
+
+      # Informational: doctor exits 1 on runners (no Bonjour, no display of
+      # problems is expected to stay green here) but its output catching a
+      # regression in the checks themselves is still worth a look.
+      - name: Doctor (informational)
+        shell: powershell
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\doctor.ps1
+
+      # Exercises the teardown against the rules the real setup above created.
+      - name: Uninstall (removes the firewall rules)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -Uninstall
+
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile installer (smoke build)
+        shell: powershell
+        run: |
+          $candidates = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe"
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+            "$env:ProgramFiles\Inno Setup 7\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw 'ISCC.exe not found after install attempt.' }
+          & $iscc /DMyAppVersion=0.0.0-ci installer\pcairplay.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-ci
+          path: installer/Output/*.exe

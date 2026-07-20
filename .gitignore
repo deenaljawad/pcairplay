@@ -1,0 +1,25 @@
+# Local overrides / experiments; per-machine private notes
+*.local.ps1
+CLAUDE.local.md
+
+# Installer build output
+installer/Output/
+
+# UxPlay runtime artifacts
+*.pem
+.uxplay.register
+.uxplay.dacp
+videodump*.h264
+audiodump*.aac
+audiodump*.alac
+audiodump*.aud
+
+# Downloaded installers
+*.exe
+*.zip
+
+# Editor / OS noise
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

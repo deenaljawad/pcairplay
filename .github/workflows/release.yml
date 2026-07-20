@@ -1,0 +1,70 @@
+name: Release
+
+# Tag vX.Y.Z -> build the net-installer and the plain-scripts zip, hash both,
+# publish a GitHub release with all three files attached.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version from tag
+        id: ver
+        shell: powershell
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Build installer
+        shell: powershell
+        run: |
+          $candidates = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe"
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+            "$env:ProgramFiles\Inno Setup 7\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw 'ISCC.exe not found after install attempt.' }
+          & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" installer\pcairplay.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Zip the scripts (no-installer option)
+        shell: powershell
+        run: |
+          $files = 'uxplay-common.ps1', 'setup.ps1', 'start-airplay.ps1',
+                   'airplay-ui.ps1', 'frame-mirror.ps1', 'doctor.ps1',
+                   'AirPlay UI.vbs', 'AirPlay UI.cmd', 'Diagnostics.cmd',
+                   'Framed Mirror.cmd', 'README.md', 'LICENSE'
+          Compress-Archive -Path $files -DestinationPath "pcairplay-${{ steps.ver.outputs.version }}.zip"
+
+      - name: SHA256SUMS
+        shell: powershell
+        run: |
+          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item pcairplay-*.zip)
+          $lines = foreach ($f in $items) {
+            '{0}  {1}' -f (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $f.Name
+          }
+          $lines | Out-File SHA256SUMS.txt -Encoding ascii
+          Get-Content SHA256SUMS.txt
+
+      - name: Create GitHub release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $exe = (Get-Item installer\Output\*.exe).FullName
+          $zip = (Get-Item pcairplay-*.zip).FullName
+          gh release create "${{ github.ref_name }}" $exe $zip SHA256SUMS.txt --title "pcairplay ${{ steps.ver.outputs.version }}" --generate-notes
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
