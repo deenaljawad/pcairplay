@@ -169,6 +169,13 @@ responsiveness over perfect sync:
   `.\start-airplay.ps1 -Sync`** to restore correct lip-sync.
 - `-fps 60` — UxPlay's own default is 30. Lower it with `-Fps 30` if the network
   is congested and playback stutters.
+- `-h265` — sets AirPlay features bit 42 (SupportsScreenMultiCodec). **Not
+  optional in practice**: a phone that elects to send H.265 — always at 4K,
+  and observed live at 1440p (iPhone16,1, iOS 26.5.2) — is otherwise rejected
+  mid-stream with "connected but no video" while the phone shows the
+  tickmark. Root-caused 2026-07-20; see the resolved stall under *Status*.
+  Flag verified against `uxplay -h` on 1.72.1-3; `d3d11h265dec` confirmed
+  present in the bundled d3d11 plugin.
 - `-vs d3d11videosink` — hardware-accelerated Windows presentation, and the only
   bundled sink that handles `-fs` (fullscreen) correctly.
 - `-nc` — keeps the window open after the phone disconnects.
@@ -352,8 +359,9 @@ compatibility*. `-s 2560x1440` on the same link streamed immediately, both
 times. 4K was briefly offered as an opt-in segment and got selected in normal
 use within the hour, reproducing the stall — an option whose only observable
 behaviour is "mirroring silently breaks" is a trap, not a feature, hence
-removed. The UI self-test asserts it stays gone. If mirroring "connects but
-no video ever arrives", check the advertised `-s` first.
+removed. The UI self-test asserts it stays gone. (Root-caused later the same
+day: 4K streams are always H.265 and `-h265` was missing — see the resolved
+stall in *Status*. The segment stays removed on sharpness grounds anyway.)
 
 Perceived sharpness note, learned the same session: raising `-s` raises the
 ENCODED pixel count, but what anyone sees is bounded by the on-screen size of
@@ -612,9 +620,10 @@ is therefore the entire shopping list for a first real mirroring test. Note that
 a charge-only cable fails *silently*: no Trust prompt, no device in Device
 Manager, nothing that names the cable as the cause.
 
-### OPEN ISSUE (2026-07-20, unresolved): sessions stall — RTSP holds, no video
+### RESOLVED (2026-07-20 evening): the "RTSP holds, no video" stall was a missing `-h265`
 
-**Status: under active debugging. Read this before touching anything else.**
+**Status: root-caused and fixed — `Build-UxPlayArgs` now always passes
+`-h265`. The section is kept for the method and the disproved theories.**
 
 Symptom: phone says "connected", engine holds exactly one established TCP
 connection (RTSP, phone 172.20.10.1 → PC 172.20.10.6 on the engine's ephemeral
@@ -678,6 +687,26 @@ a GStreamer window exists, so it is not a suspect for the stall itself.
   placeholder says the same. The CLI gained `-EngineDebug` (uxplay `-d 1`) for
   a verbose capture of exactly where negotiation stops. **Next stall: read the
   newest `airplay-ui-*` / `start-airplay-*` log.**
+
+**Evening resolution:** the very first stalled session with engine output
+captured showed the cause outright, twice in one log:
+
+    raop_rtp_mirror starting mirroring
+    *** ERROR: raop_rtp_mirror: received type 0x01 packet with no payload:
+    this indicates non-h264 video but Airplay features bit 42
+    (SupportsScreenMultiCodec) is not set
+    use startup option "-h265" to set this bit and support h265 (4K) video
+    Connection closed for socket 12460
+
+The phone sometimes elects to send **H.265** — always at 4K (why
+`-s 3840x2160` stalled 2/2) and sometimes at 1440p — and without `-h265` the
+engine rejects the stream *after* the phone has shown its tickmark. Codec
+choice varies per session, which is exactly the "same settings, different
+outcome" pattern in the table above. Launcher, link and phone-state theories
+are all dead. A session captured minutes after the fix confirmed the
+counterpart: same settings, phone chose H.264, streamed fine without the
+flag — the dice-roll, observed from both sides. The 4K UI segment stays
+removed regardless, on the perceived-sharpness grounds above.
 
 ### Before a demo — do this in order
 

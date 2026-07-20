@@ -147,7 +147,7 @@ try {
     [xml]$xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PC AirPlay" Width="480" SizeToContent="Height"
+        Title="PC AirPlay" Width="524" SizeToContent="Height"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI Variable Display, Segoe UI Variable Text, Segoe UI"
@@ -409,8 +409,12 @@ try {
 
   </Window.Resources>
 
-  <!-- Shell: rounded, hairline-edged, sitting on a large soft shadow. -->
-  <Border x:Name="Shell" CornerRadius="22" BorderBrush="#1FFFFFFF" BorderThickness="1" Margin="14">
+  <!-- Shell: rounded, hairline-edged, sitting on a large soft shadow.
+       The margin is the shadow's canvas: it must cover BlurRadius +
+       ShadowDepth, or the blur clips at the window rectangle and reads as a
+       hard-cut box on the desktop (user-reported). Window width grows by the
+       same amount so the card itself keeps its size. -->
+  <Border x:Name="Shell" CornerRadius="22" BorderBrush="#1FFFFFFF" BorderThickness="1" Margin="36">
     <Border.Background>
       <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#13151A" Offset="0"/>
@@ -419,7 +423,7 @@ try {
       </LinearGradientBrush>
     </Border.Background>
     <Border.Effect>
-      <DropShadowEffect BlurRadius="38" ShadowDepth="10" Opacity="0.8" Color="#000000"/>
+      <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
     </Border.Effect>
 
     <StackPanel Margin="26,8,26,18">

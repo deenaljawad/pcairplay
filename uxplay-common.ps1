@@ -471,6 +471,17 @@ function Build-UxPlayArgs {
         $argList += @('-vsync', 'no')       # lowest latency - best for interactive demos
     }
 
+    # -h265 sets AirPlay features bit 42 (SupportsScreenMultiCodec). Without
+    # it, a phone that decides to send H.265 - reliably at 4K, and observed
+    # live at 1440p from an iPhone16,1 on iOS 26.5.2 (AirPlay/950.7.1) - has
+    # its video REJECTED: the engine logs "received type 0x01 packet with no
+    # payload ... use startup option -h265" and closes the connection, while
+    # the phone keeps showing the mirroring tickmark. That was the documented
+    # "connected but no video" stall, root-caused 2026-07-20 from the first
+    # captured engine log of a stalled session. H.265 decode rides the same
+    # d3d11/nvcodec plugins as H.264 on this build, so this is unconditional.
+    $argList += '-h265'
+
     # Prefer the Direct3D 11 sink: hardware-accelerated presentation on Windows
     # and the only sink here that supports -fs properly.
     #
