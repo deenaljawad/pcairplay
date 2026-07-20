@@ -102,11 +102,16 @@ frame opens with the UI, remembers its position and size, and the switch works
 mid-session in both directions. **Closing the UI closes everything**: receiver,
 engine, frame — one predictable rule, nothing left behind.
 
+**Fullscreen** and the frame are mutually exclusive — fullscreen fills the
+monitor with the video itself, so there is nothing for a chassis to wrap;
+switching either one on switches the other off.
+
 Settings persist across launches (`%LOCALAPPDATA%\pcairplay\ui-settings.json`).
 With **Require PIN** on, the 4-digit code appears right in the window under the
-status — the UI generates it and hands it to the engine, so there is no console
-to go read. The UI is single-instance: launching it twice just surfaces the
-window that is already open.
+status and stays there for the whole session, including while mirroring — the
+UI generates it and hands it to the engine, so there is no console to go read.
+The UI is single-instance: launching it twice just surfaces the window that is
+already open.
 
 The status it shows is **"Discoverable" / "iPhone connected" / "Mirroring"**,
 derived from the engine's actual sockets and log — it names the documented

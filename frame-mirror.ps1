@@ -75,7 +75,7 @@ $ErrorActionPreference = 'Stop'
 # strict-clean.
 . (Join-Path $PSScriptRoot 'uxplay-common.ps1')
 
-Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml, System.Drawing
+Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml, System.Drawing, System.Windows.Forms
 
 Add-Type -TypeDefinition @"
 using System;
@@ -592,6 +592,26 @@ function Write-FrameLog {
     } catch { }
 }
 
+function Test-FullscreenVideoWindow {
+    # A fullscreen mirror (-fs / the UI's Fullscreen switch) must never be
+    # adopted: the chassis would be sized to the MONITOR's landscape aspect
+    # with the portrait video floating inside it - a monitor-wide "iPhone"
+    # (shipped once, user-reported). The UI refuses the combination up front;
+    # this guard covers a CLI launch (start-airplay.ps1 -Fullscreen) with the
+    # frame running alongside. Fingerprint of d3d11videosink's fullscreen
+    # mode: the caption is gone AND the window covers its whole monitor. The
+    # windowed engine window always keeps WS_CAPTION until Attach-Video
+    # strips it, and by then it is no longer a candidate.
+    param([IntPtr]$Hwnd)
+    $style = [long][FrameNative]::GetWindowLongPtr($Hwnd, [FrameNative]::GWL_STYLE)
+    if (($style -band [FrameNative]::WS_CAPTION) -eq [FrameNative]::WS_CAPTION) { return $false }
+    $r = New-Object FrameNative+RECT
+    if (-not [FrameNative]::GetWindowRect($Hwnd, [ref]$r)) { return $false }
+    $mon = [System.Windows.Forms.Screen]::FromHandle($Hwnd).Bounds
+    ($r.Left -le $mon.Left -and $r.Top -le $mon.Top -and
+     $r.Right -ge $mon.Right -and $r.Bottom -ge $mon.Bottom)
+}
+
 function Get-BezelHwnd   { (New-Object System.Windows.Interop.WindowInteropHelper $w.Bezel).Handle }
 function Get-OverlayHwnd { (New-Object System.Windows.Interop.WindowInteropHelper $w.Overlay).Handle }
 
@@ -966,6 +986,16 @@ function Invoke-FrameTick {
                 return
             }
             $script:RestoreTries = 0
+            if (Test-FullscreenVideoWindow -Hwnd $script:Candidate) {
+                # Went fullscreen while settling. Un-hide it (it was hidden
+                # for the settle) and blacklist it instead of adopting.
+                [void][FrameNative]::ShowWindow($script:Candidate, [FrameNative]::SW_SHOWNOACTIVATE)
+                $script:BlockedHwnd = $script:Candidate
+                $script:Candidate = [IntPtr]::Zero; $script:CandSize = ''; $script:CandStable = 0
+                $ui.WaitDetail.Text = 'The mirror is running fullscreen, so the iPhone frame does not apply. Restart the receiver with Fullscreen off to use the frame.'
+                Write-FrameLog 'candidate went fullscreen while settling - not adopting'
+                return
+            }
             $r = New-Object FrameNative+RECT
             [void][FrameNative]::GetWindowRect($script:Candidate, [ref]$r)
             $size = "$($r.Right - $r.Left)x$($r.Bottom - $r.Top)"
@@ -1004,6 +1034,14 @@ function Invoke-FrameTick {
             return    # already told the user why; keep that message on screen
         }
         if ($hwnd -ne [IntPtr]::Zero) {
+            if (Test-FullscreenVideoWindow -Hwnd $hwnd) {
+                # Never hide or adopt a fullscreen mirror - blacklist it and
+                # say why, the same channel the elevated-engine case uses.
+                $script:BlockedHwnd = $hwnd
+                $ui.WaitDetail.Text = 'The mirror is running fullscreen, so the iPhone frame does not apply. Restart the receiver with Fullscreen off to use the frame.'
+                Write-FrameLog ("candidate: hwnd=0x{0:X} is fullscreen - not adopting" -f $hwnd.ToInt64())
+                return
+            }
             $script:Candidate = $hwnd
             # Hide it in the SAME tick it is first seen: every visible
             # millisecond of the bare window is the "separate window appears

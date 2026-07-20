@@ -483,13 +483,14 @@ try {
           <TextBlock x:Name="StatusText" Text="Ready" Foreground="#F5F5F7"
                      FontSize="34" FontWeight="Light" TextAlignment="Center"
                      Margin="0,10,0,0"/>
-          <!-- MinHeight reserves every line the running message can need: at
-               MaxLength=24 the worst case is 3 x LineHeight. Without it the
-               window grows the instant Start is pressed - resizing out from
-               under the pointer that just clicked it. -->
+          <!-- MinHeight reserves every line the running message can need: the
+               worst case is the stall instruction (3 lines at MaxWidth) plus
+               the PIN line, which rides every running state = 4 x LineHeight.
+               Without it the window grows the instant the text does -
+               resizing out from under the pointer that just clicked Start. -->
           <TextBlock x:Name="SubStatusText" Foreground="#8E8E93" FontSize="13"
                      TextAlignment="Center" TextWrapping="Wrap" MaxWidth="340"
-                     Margin="0,6,0,0" LineHeight="19" MinHeight="57"
+                     Margin="0,6,0,0" LineHeight="19" MinHeight="76"
                      Text="Press Start, then pick this PC from Screen Mirroring"/>
         </StackPanel>
       </Grid>
@@ -1238,14 +1239,23 @@ try {
             if (-not $Headline) { $Headline = 'Discoverable' }
             if (-not $Detail) {
                 $Detail = "Control Center > Screen Mirroring > '$(Get-DeviceName)'"
-                # The engine runs with a fixed "-pin nnnn" this UI generated,
-                # so the code can be SHOWN - the engine's console (which used
-                # to display a random one) stays hidden now.
-                if ($ui.PinCheck.IsChecked -and $script:pinCode) {
-                    $Detail += "`nPIN: $($script:pinCode)"
-                }
+            }
+            # The engine runs with a fixed "-pin nnnn" this UI generated, so
+            # the code can be SHOWN - the engine's console (which used to
+            # display a random one) stays hidden now. Appended to EVERY
+            # running state, not only the idle default: it used to vanish the
+            # moment the hero advanced to "iPhone connected" / "Mirroring"
+            # (user-reported), exactly when a second phone joining via
+            # -nohold takeover still needs it.
+            if ($ui.PinCheck.IsChecked -and $script:pinCode) {
+                $Detail += "`nPIN: $($script:pinCode)"
             }
             foreach ($k in $script:LockedControls) { $ui[$k].IsEnabled = $false }
+            # The one live switch follows the SESSION: a fullscreen engine has
+            # no window the frame can wrap (adopting it builds a monitor-wide
+            # chassis), so the frame switch sleeps for exactly those sessions
+            # and wakes again on Stop.
+            $ui.FrameCheck.IsEnabled = -not [bool]$ui.FullscreenCheck.IsChecked
             # Settings recede while live: dimmed *and* disabled, so "locked"
             # reads at a glance instead of only on click.
             Start-Fade -Element $ui.SettingsCard -To 0.4 -Ms 320
@@ -1269,6 +1279,7 @@ try {
             }
             if (-not $Detail)   { $Detail = 'Press Start, then pick this PC from Screen Mirroring' }
             foreach ($k in $script:LockedControls) { $ui[$k].IsEnabled = $true }
+            $ui.FrameCheck.IsEnabled = $true
             Start-Fade -Element $ui.SettingsCard -To 1 -Ms 320
             Start-Fade -Element $ui.GlyphLive -To 0 -Ms 300
             Start-Fade -Element $ui.GlyphIdle -To 1 -Ms 420
@@ -1363,8 +1374,11 @@ try {
         # The framed view rides along with Start: it is the app's face for a
         # mirror session, and forgetting to open it separately used to read as
         # "the mockup is gone". Best-effort - a frame that fails to appear
-        # must not fail the receiver.
-        if ($ui.FrameCheck.IsChecked) { try { Start-FramedMirror } catch { } }
+        # must not fail the receiver. The fullscreen guard is a belt over the
+        # switch exclusivity: a fullscreen session must never open the frame.
+        if ($ui.FrameCheck.IsChecked -and -not $ui.FullscreenCheck.IsChecked) {
+            try { Start-FramedMirror } catch { }
+        }
 
         # Fresh session, fresh state machine.
         $script:enginePid      = $null
@@ -1474,7 +1488,19 @@ try {
     # video window within seconds), unchecking closes it, and the mirror
     # survives either way - the frame's own Closing handler restores the video
     # window, which is why close is a WM_CLOSE and never a kill.
+    #
+    # Fullscreen and the frame are MUTUALLY EXCLUSIVE: -fs sizes the video
+    # window to the whole monitor, and a chassis wrapped around THAT is a
+    # monitor-wide landscape "iPhone" with the portrait mirror floating inside
+    # (shipped once, user-reported). Checking either switch clears the other -
+    # deliberately ahead of the suppress/self-test guards, so a restored
+    # legacy settings file with both on reconciles too; the frame's own
+    # Unchecked handler is what closes a live framed view.
+    $ui.FullscreenCheck.Add_Checked({
+        try { if ($ui.FrameCheck.IsChecked) { $ui.FrameCheck.IsChecked = $false } } catch { }
+    })
     $ui.FrameCheck.Add_Checked({
+        try { if ($ui.FullscreenCheck.IsChecked) { $ui.FullscreenCheck.IsChecked = $false } } catch { }
         if ($script:suppressFrameEvents -or $script:isSelfTest) { return }
         try { Start-FramedMirror } catch { }
     })
@@ -1837,6 +1863,20 @@ try {
         if ([Array]::IndexOf($pa, '-reg') -lt 0) {
             throw '-reg is missing - the phone would be re-challenged on every connection.'
         }
+
+        # The PIN must survive state changes. It used to ride only the idle
+        # "Discoverable" default and vanished the moment the hero advanced to
+        # "iPhone connected" / "Mirroring" (user-reported) - the exact moment
+        # a second phone joining via -nohold takeover still needs it. A fake
+        # live proc drives Update-Status down its running branch.
+        $script:proc = [pscustomobject]@{ HasExited = $false }
+        try {
+            Update-Status -Headline 'Mirroring' -Detail 'The iPhone is connected and video is live.'
+            if ($ui.SubStatusText.Text -notmatch "PIN: $($script:pinCode)") {
+                throw 'The PIN left the sub-status when the state advanced to Mirroring.'
+            }
+        } finally { $script:proc = $null }
+        Update-Status
         $ui.PinCheck.IsChecked = $false
         $script:pinCode = $null
 
@@ -1845,6 +1885,27 @@ try {
         if ($script:LockedControls -contains 'FrameCheck') {
             throw 'FrameCheck is in LockedControls - the frame switch must stay usable while running.'
         }
+
+        # Fullscreen and the frame are mutually exclusive - both on wraps the
+        # fullscreen video window in a monitor-wide chassis (shipped once).
+        $ui.FrameCheck.IsChecked = $true
+        $ui.FullscreenCheck.IsChecked = $true
+        if ($ui.FrameCheck.IsChecked) { throw 'Checking Fullscreen did not switch the frame off.' }
+        $ui.FrameCheck.IsChecked = $true
+        if ($ui.FullscreenCheck.IsChecked) { throw 'Checking the frame did not switch fullscreen off.' }
+        # Mid-session the frame switch stays live EXCEPT in a fullscreen
+        # session, where flipping it on would adopt the fullscreen window.
+        $ui.FrameCheck.IsChecked = $false
+        $ui.FullscreenCheck.IsChecked = $true
+        $script:proc = [pscustomobject]@{ HasExited = $false }
+        try {
+            Update-Status
+            if ($ui.FrameCheck.IsEnabled) { throw 'The frame switch stayed live during a fullscreen session.' }
+        } finally { $script:proc = $null }
+        $ui.FullscreenCheck.IsChecked = $false
+        Update-Status
+        if (-not $ui.FrameCheck.IsEnabled) { throw 'The frame switch did not wake up after the fullscreen session.' }
+        $ui.FrameCheck.IsChecked = $true
 
         # A name that looks like an option must be rejected, not passed through.
         # Resolve-UxPlayDeviceName is asserted directly: Test-DeviceName raises a
@@ -1880,6 +1941,9 @@ try {
             (Resolve-SessionState -Established 0 -VideoSeen $false -ConnectedSeconds 0 -ClientDesc $null -BonjourDeaf $true).Detail
             'Heads-up: Bonjour has no network socket - iPhones cannot see this PC. Run Diagnostics for the fix.'
             'A receiver started outside this app is running. It keeps working; this window does not control it.'
+            # The PIN line rides every running state, so the true worst case
+            # is the longest state detail PLUS the PIN line.
+            ((Resolve-SessionState -Established 1 -VideoSeen $false -ConnectedSeconds 20 -ClientDesc 'iPhone (iPhone16,1)' -BonjourDeaf $false).Detail + "`nPIN: 8888")
         )
         foreach ($probe in $stateProbes) {
             $ui.SubStatusText.Text = $probe

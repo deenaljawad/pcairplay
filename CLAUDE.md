@@ -349,6 +349,26 @@ building it — don't rediscover them:
   ends a `ShowDialog` loop, so a fake test window must use
   `Application.Run`, or it exits the moment the frame hides it.
 
+- **Fullscreen and the frame are mutually exclusive (2026-07-20 late
+  evening, both user-reported).** `-fs` sizes the video window to the whole
+  monitor, and the frame happily adopted it: a monitor-wide landscape
+  "iPhone" with the portrait mirror floating inside. Now checking either UI
+  switch clears the other (ahead of the suppress/self-test guards, so a
+  legacy settings file with both on reconciles on restore), Start won't open
+  the frame for a fullscreen session, and the frame switch is disabled while
+  a fullscreen session runs (flipping it mid-session would adopt the
+  fullscreen window). The frame itself also refuses: caption-less +
+  covers-its-monitor is the fullscreen fingerprint
+  (`Test-FullscreenVideoWindow`, verified against real windows), and such a
+  window is blacklisted with an explanation instead of adopted — that guard
+  is what covers a CLI `start-airplay.ps1 -Fullscreen` next to a standalone
+  frame. Same evening, same report: **the PIN now rides every running
+  state** — it used to be appended only to the idle "Discoverable" detail,
+  so it vanished the moment the hero advanced to "iPhone connected" /
+  "Mirroring" (exactly when a second phone joining via `-nohold` takeover
+  still needs it). Sub-status MinHeight grew to 4 lines (worst case = stall
+  instruction + PIN line); both behaviours are `-SelfTest`-asserted.
+
 Resolution note: the UI's segmented control is **1440p / 1080p** (default
 1440p; 720p dropped as unused, **4K removed entirely**). The "bigger
 advertised size cannot make things worse" assumption was **wrong and is
