@@ -245,11 +245,33 @@ function Install-FromGitHub {
         Write-Note "Running installer silently..."
         if ($leaf -like '*.msi') {
             $p = Start-Process -FilePath 'msiexec.exe' `
-                               -ArgumentList '/i', "`"$dest`"", '/qn', '/norestart' -Wait -PassThru
+                               -ArgumentList '/i', "`"$dest`"", '/qn', '/norestart' -PassThru
         } else {
             $p = Start-Process -FilePath $dest `
-                               -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+                               -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru
         }
+
+        # NOT -Wait: an Inno installer waits for its own [Run] entries, and if
+        # the vendor's includes launching its GUI app without skipifsilent,
+        # "silent install" quietly becomes "blocked forever behind a window
+        # nobody can see". Poll instead: close any GUI the installer spawned
+        # (it is a competing receiver here anyway - Get-CompetingReceiverProcess
+        # lists uxplay-windows for that reason), and give up loudly after 10
+        # minutes rather than hanging setup.
+        $deadline = [DateTime]::UtcNow.AddMinutes(10)
+        while (-not $p.HasExited) {
+            if ([DateTime]::UtcNow -gt $deadline) {
+                Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+                throw "Installer did not finish within 10 minutes - killed. Re-run, or install manually."
+            }
+            Get-Process -Name 'uxplay-windows' -ErrorAction SilentlyContinue |
+                Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 5
+        }
+        # One more sweep: a GUI launched in the installer's last moments would
+        # otherwise survive as a rival receiver with its own mDNS entry.
+        Get-Process -Name 'uxplay-windows' -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
 
         # 3010 = success, reboot required. 1618 = another install in progress.
         switch ($p.ExitCode) {
