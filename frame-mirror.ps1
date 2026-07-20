@@ -254,6 +254,16 @@ function New-FrameWindows {
     }
     if ($missing.Count -gt 0) { throw "XAML elements did not bind: $($missing -join ', ')" }
 
+    # The bezel is taskbar-visible; without an explicit icon it wears
+    # powershell.exe's. A checkout without the .ico degrades silently.
+    $icoPath = Join-Path $PSScriptRoot 'pcairplay.ico'
+    if (Test-Path -LiteralPath $icoPath) {
+        try {
+            $bezel.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create(
+                (New-Object System.Uri $icoPath), 'None', 'OnLoad')
+        } catch { }
+    }
+
     [pscustomobject]@{ Bezel = $bezel; Overlay = $overlay; UI = $ui }
 }
 

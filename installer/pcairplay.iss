@@ -42,6 +42,10 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName={#MyAppName}
+; The app icon, everywhere Windows shows one: the setup exe itself (what the
+; user downloads), Apps & Features, and the shortcuts below.
+SetupIconFile=..\pcairplay.ico
+UninstallDisplayIcon={app}\pcairplay.ico
 
 [Files]
 Source: "..\uxplay-common.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -56,17 +60,20 @@ Source: "..\Diagnostics.cmd";   DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Framed Mirror.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md";         DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE";           DestDir: "{app}"; Flags: ignoreversion
+Source: "..\pcairplay.ico";     DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Icons]
 ; The .vbs launcher is the zero-window-flash path; .vbs shortcuts open via
-; wscript by file association.
-Name: "{group}\AirPlay UI";          Filename: "{app}\AirPlay UI.vbs";  WorkingDir: "{app}"
-Name: "{group}\AirPlay Diagnostics"; Filename: "{app}\Diagnostics.cmd"; WorkingDir: "{app}"
+; wscript by file association. IconFilename replaces the generic script icon;
+; AppUserModelID matches what airplay-ui.ps1 sets on its process, so pinning
+; and taskbar grouping treat this as one app rather than "PowerShell".
+Name: "{group}\AirPlay UI";          Filename: "{app}\AirPlay UI.vbs";  WorkingDir: "{app}"; IconFilename: "{app}\pcairplay.ico"; AppUserModelID: "gbulog.pcairplay"
+Name: "{group}\AirPlay Diagnostics"; Filename: "{app}\Diagnostics.cmd"; WorkingDir: "{app}"; IconFilename: "{app}\pcairplay.ico"
 Name: "{group}\Uninstall pcairplay"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\AirPlay UI";    Filename: "{app}\AirPlay UI.vbs";  WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autodesktop}\AirPlay UI";    Filename: "{app}\AirPlay UI.vbs";  WorkingDir: "{app}"; IconFilename: "{app}\pcairplay.ico"; AppUserModelID: "gbulog.pcairplay"; Tasks: desktopicon
 
 [Run]
 ; Interactive installs: keep the console open (-NoExit) so what setup did -

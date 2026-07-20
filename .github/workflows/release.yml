@@ -47,7 +47,7 @@ jobs:
           $files = 'uxplay-common.ps1', 'setup.ps1', 'start-airplay.ps1',
                    'airplay-ui.ps1', 'frame-mirror.ps1', 'doctor.ps1',
                    'AirPlay UI.vbs', 'AirPlay UI.cmd', 'Diagnostics.cmd',
-                   'Framed Mirror.cmd', 'README.md', 'LICENSE'
+                   'Framed Mirror.cmd', 'README.md', 'LICENSE', 'pcairplay.ico'
           Compress-Archive -Path $files -DestinationPath "pcairplay-${{ steps.ver.outputs.version }}.zip"
 
       - name: SHA256SUMS

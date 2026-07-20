@@ -43,10 +43,12 @@ downloads the UxPlay engine (pinned 1.72.1-3, SHA-256-checked against the
 upstream release) and opens the firewall. If Apple Bonjour is missing, setup
 says so and points at Apple's own installer — see *Requirements* above.
 
-Windows SmartScreen may warn about an installer from an unknown publisher
-("Windows protected your PC"). That is reputation, not a detection — the
-installer is unsigned. Click **More info → Run anyway**, or verify the
-download against `SHA256SUMS.txt` on the release page first. The exe contains
+Your browser may flag the download itself (Edge: "…isn't commonly
+downloaded") — that is reputation for a new unsigned exe, not a detection.
+In Edge: hover the download → **⋯ → Keep → Show more → Keep anyway**. Windows
+SmartScreen may then warn once more when you run it ("Windows protected your
+PC") — click **More info → Run anyway**, or verify the download against
+`SHA256SUMS.txt` on the release page first. The exe contains
 only the scripts in this repo; the engine comes from
 [uxplay-windows](https://github.com/leapbtw/uxplay-windows)'s own release at
 install time.

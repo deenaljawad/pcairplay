@@ -39,6 +39,8 @@ machine-identifying THERE, never here: this file is public.
 | `doctor.ps1` | Read-only diagnostics. Run this first whenever mirroring fails. Exit code 0 = clean, 1 = problems. |
 | `installer/pcairplay.iss` | Inno Setup **net-installer**: ships ONLY this repo's scripts + Start Menu shortcuts, offers to run `setup.ps1` post-install (the engine download happens there), uninstall runs `setup.ps1 -Uninstall`. Built by CI; `installer/Output/` is gitignored. See *Distribution*. |
 | `.github/workflows/` | `ci.yml` — the real `setup.ps1` flow (engine download + firewall + teardown), both `-SelfTest`s, `-DryRun`, `-WhatIf` and an installer smoke-build on every push. `release.yml` — tag `v*` → build installer + scripts zip + `SHA256SUMS.txt`, publish the GitHub release. |
+| `pcairplay.ico` | The app icon — window/taskbar/tray, both shortcut sets, the setup exe, Apps & Features. **Regenerate with `tools/make-icon.ps1`, never hand-edit.** |
+| `tools/make-icon.ps1` | Vector-draws the icon with WPF and packs a proper multi-size .ico (256 px as a PNG entry, the rest as 32-bit BGRA BMP entries with AND masks). |
 
 `uxplay-common.ps1` is dot-sourced by all five scripts (including
 `frame-mirror.ps1`, which runs it under StrictMode 3 — keep it strict-clean)
@@ -710,6 +712,12 @@ a GStreamer window exists, so it is not a suspect for the stall itself.
   message. Call a C#-side wrapper whose `null` is real
   (`PCAirPlayNative.FindWindowByTitle`), or pass `[NullString]::Value`. Any
   new P/Invoke with an optional string parameter needs this treatment.
+- **A PowerShell function "returning" a `byte[]` unrolls it into the
+  pipeline**, so the caller receives `object[]` — and `BinaryWriter.Write`
+  then resolves the overload by COERCING `object[]` TO BOOLEAN, writing one
+  `0x01` byte per call, silently. The icon generator shipped a 142-byte .ico
+  whose directory claimed 57 KB this way. Return binary arrays with the unary
+  comma (`, $bytes`) and cast at the write site (`[byte[]]`).
 - **`New-NetFirewallRule -LocalPort` needs an array, not a comma-separated
   string.** `'7000,7001,7100'` fails with "The port is invalid"; ranges like
   `'6000-6009'` are fine. This already bit once: the TCP control rule silently
@@ -898,6 +906,9 @@ negatives or a broken check looks exactly like a working one.
 
 ## Not built
 
-- Tray-icon / auto-start launcher (discussed, not implemented).
+- Auto-start-on-login (discussed, not implemented). The **tray icon exists**
+  since 2026-07-20: minimise sends the UI to the tray by toggling
+  `ShowInTaskbar` — deliberately NOT `$window.Hide()`, which ends a
+  `ShowDialog` loop and would silently exit the whole app.
 - Session recording (`-vdmp`/`-admp`) — `.gitignore` already anticipates the
   dump files, but no script can produce them.
