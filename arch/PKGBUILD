@@ -1,0 +1,51 @@
+# Maintainer: AirPlayPC contributors
+pkgname=pcairplay-git
+pkgver=0.r0.g0000000
+pkgrel=1
+pkgdesc='Arch Linux controller, diagnostics, and desktop integration for UxPlay'
+arch=('any')
+url='https://github.com/gbulog/pcairplay'
+license=('MIT')
+depends=('uxplay' 'python' 'python-gobject' 'gtk3' 'gtk4' 'gst-plugin-gtk4' 'wmctrl'
+         'gst-plugins-base' 'gst-plugins-good' 'gst-plugins-bad' 'gst-libav'
+         'iproute2' 'bluez' 'bluez-utils' 'python-dbus-fast')
+makedepends=('git')
+optdepends=('avahi: service discovery for UxPlay builds linked to external DNS-SD'
+            'firewalld: managed firewall rules'
+            'ufw: managed firewall rules')
+provides=('pcairplay')
+conflicts=('pcairplay')
+source=('pcairplay::git+https://github.com/gbulog/pcairplay.git'
+        'bluez_peripheral-0.2.0a5-py3-none-any.whl::https://files.pythonhosted.org/packages/00/c3/be30e1f8ac9c9664024443fff8493e07850c4ea7a07f6d2a7410adc3a196/bluez_peripheral-0.2.0a5-py3-none-any.whl')
+noextract=('bluez_peripheral-0.2.0a5-py3-none-any.whl')
+sha256sums=('SKIP'
+            '385a2e83aa212de0a8f9d2ae9db89cb648a4286d81bb11c62146e56c8edf31f7')
+
+pkgver() {
+    cd "$srcdir/pcairplay"
+    printf '0.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+package() {
+    cd "$srcdir/pcairplay"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 arch/pcairplay_common.py "$pkgdir/usr/lib/pcairplay/pcairplay_common.py"
+    install -Dm755 arch/pcairplay.py "$pkgdir/usr/lib/pcairplay/pcairplay.py"
+    install -Dm755 arch/airplay-ui.py "$pkgdir/usr/lib/pcairplay/airplay-ui.py"
+    install -Dm755 arch/frame-mirror.py "$pkgdir/usr/lib/pcairplay/frame-mirror.py"
+    install -Dm755 arch/assistive-control.py "$pkgdir/usr/lib/pcairplay/assistive-control.py"
+    python -m zipfile -e "$srcdir/bluez_peripheral-0.2.0a5-py3-none-any.whl" \
+        "$pkgdir/usr/lib/pcairplay/vendor"
+    rm -rf "$pkgdir/usr/lib/pcairplay/vendor/tests"
+    install -d "$pkgdir/usr/bin"
+    ln -s /usr/lib/pcairplay/pcairplay.py "$pkgdir/usr/bin/pcairplay"
+    ln -s /usr/lib/pcairplay/airplay-ui.py "$pkgdir/usr/bin/pcairplay-ui"
+    ln -s /usr/lib/pcairplay/assistive-control.py "$pkgdir/usr/bin/pcairplay-control"
+    install -Dm644 arch/pcairplay.desktop "$pkgdir/usr/share/applications/pcairplay.desktop"
+    install -Dm644 arch/pcairplay-diagnostics.desktop "$pkgdir/usr/share/applications/pcairplay-diagnostics.desktop"
+    install -Dm644 arch/pcairplay-control.desktop "$pkgdir/usr/share/applications/pcairplay-control.desktop"
+    install -Dm644 arch/pcairplay.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/pcairplay.svg"
+    install -Dm644 arch/pcairplay.service "$pkgdir/usr/lib/systemd/user/pcairplay.service"
+    sed -i 's|%h/.local/bin/pcairplay|/usr/bin/pcairplay|' \
+        "$pkgdir/usr/lib/systemd/user/pcairplay.service"
+}

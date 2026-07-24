@@ -17,6 +17,14 @@ audiodump*.aud
 # Downloaded installers
 *.exe
 *.zip
+*.tar.gz
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Extracted by the Arch installer from its pinned, checksum-verified wheel
+arch/vendor/
 
 # Editor / OS noise
 .vscode/

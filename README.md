@@ -1,7 +1,7 @@
 # AirPlayPC
 
-Mirror an iPhone screen to a Windows PC using **native iOS Screen Mirroring** —
-no app on the phone.
+Mirror an iPhone screen to a Windows or Arch Linux PC using **native iOS Screen
+Mirroring** — no app on the phone.
 
 The phone sees the PC in Control Center → Screen Mirroring, exactly like an
 Apple TV. Nothing to install on iOS, nothing to sideload.
@@ -12,9 +12,9 @@ Apple TV. Nothing to install on iOS, nothing to sideload.
 
 ## How it works
 
-This repo is **Windows glue, not protocol code**. The receiver itself is
-[UxPlay](https://github.com/FDH2/UxPlay) (via the prebuilt
-[uxplay-windows](https://github.com/leapbtw/uxplay-windows) build), which
+This repo is **desktop integration, not protocol code**. The receiver itself is
+[UxPlay](https://github.com/FDH2/UxPlay) (native UxPlay on Arch, or the prebuilt
+[uxplay-windows](https://github.com/leapbtw/uxplay-windows) build on Windows), which
 implements the hard parts: mDNS advertisement, RTSP, the FairPlay handshake,
 pair-verify, and H.264 over RTP.
 
@@ -22,7 +22,25 @@ What's added here is the part that's otherwise fiddly and badly documented:
 install, firewall rules, mDNS prerequisites, low-latency defaults, and a
 diagnostic script that names the actual cause when it doesn't work.
 
-## Requirements
+## Platform support
+
+| Platform | Engine | Controller | Setup and diagnostics |
+|---|---|---|---|
+| Arch Linux / derivatives | Native UxPlay 1.73.x | GTK 4 + CLI | pacman/AUR/source fallback; firewalld/UFW |
+| Windows 10/11 | uxplay-windows 1.72.1-3 | WPF + CLI | Inno Setup; Windows Firewall |
+
+### Arch Linux requirements
+
+- Arch Linux or an Arch derivative using pacman.
+- A normal graphical X11 or Wayland session. Mirroring and fullscreen work on
+  both. The optional phone-shaped frame is X11-only because Wayland prevents
+  one application from reading and positioning itself around another
+  application's window.
+- The PC and iPhone must be on the same local network/broadcast domain.
+- Optional control requires a Bluetooth LE adapter that supports peripheral
+  advertising. The installer enables BlueZ and installs the pinned HID helper.
+
+### Windows requirements
 
 - Windows 10/11, Windows PowerShell 5.1 (the built-in one — PowerShell 7 not needed).
 - **Apple Bonjour.** UxPlay 1.72 imports `dnssd.dll` and calls `DNSServiceRegister`
@@ -31,7 +49,122 @@ diagnostic script that names the actual cause when it doesn't work.
   [Bonjour Print Services for Windows](https://support.apple.com/kb/DL999).
   `setup.ps1` checks for it and stops if it's missing.
 
-## Install
+## Install on Arch Linux
+
+```bash
+git clone https://github.com/gbulog/pcairplay.git
+cd pcairplay
+
+# Preview package, service, firewall, and user-integration changes:
+./setup.sh --dry-run
+
+# Install. This uses a configured uxplay package, then paru/yay, then a pinned
+# auditable source build if no package or AUR helper is available.
+./setup.sh
+
+# Verify the complete local setup, optionally including the iPhone address:
+./doctor.sh
+./doctor.sh --phone-ip 192.168.1.42
+
+# Start from the terminal, or launch AirPlayPC from the desktop application menu:
+./start-airplay.sh
+./AirPlayPC.sh
+```
+
+The setup installs the required GStreamer plugins, UxPlay, user-local launchers,
+desktop entries, and a user systemd unit. If firewalld or UFW is active, it opens
+UDP 5353 and TCP/UDP 7000–7002. The receiver uses those fixed ports by default;
+this avoids Linux firewall rules that appear correct but do not cover UxPlay's
+otherwise-random ports.
+
+To run it whenever your user session starts:
+
+```bash
+systemctl --user enable --now pcairplay.service
+```
+
+To remove the integration and firewall rules later (UxPlay, settings, pairing
+data, and logs are deliberately retained):
+
+```bash
+./setup.sh --uninstall
+```
+
+Arch CLI options use GNU-style names:
+
+```bash
+./start-airplay.sh --name "Demo Screen" --fullscreen
+./start-airplay.sh --sync                 # correct lip-sync for video
+./start-airplay.sh --fps 30               # reduce network load
+./start-airplay.sh --pin                  # require a PIN
+./start-airplay.sh --share-safe           # capture-friendly OpenGL sink
+./start-airplay.sh --software-decode
+./start-airplay.sh --no-audio
+./start-airplay.sh --dry-run              # inspect exact UxPlay argv
+```
+
+Arch logs live in `${XDG_STATE_HOME:-~/.local/state}/pcairplay/`; settings live
+in `${XDG_CONFIG_HOME:-~/.config}/pcairplay/`. The latest five logs for each
+launcher are retained.
+
+### Control the mirrored iPhone on Arch
+
+AirPlay itself only sends the picture. The Arch port can additionally present
+the laptop as a Bluetooth mouse and keyboard, which iOS accepts through
+AssistiveTouch:
+
+```bash
+./AirPlayPC-Control.sh
+# or, after setup:
+pcairplay-control
+```
+
+You can also click **Mirror & Control** in the main AirPlayPC window. The
+combined window renders the live 1080p H.264 mirror on the left and keeps its
+touchpad and keyboard on the right, including on Wayland. Click **Start mirror
+here**; it starts both the embedded receiver and Bluetooth input. Then on the
+iPhone open **Settings → Accessibility →
+Touch → AssistiveTouch**, turn it on, and choose **Devices → Bluetooth Devices →
+AirPlayPC Input**. The live video is itself an absolute control surface with a
+cursor overlay that remains visible in window shares. The controller also
+provides a relative touchpad, click/drag/scroll,
+horizontal two-finger home-screen paging, mappable AssistiveTouch Home/App
+Switcher/Spotlight buttons, and US-keyboard text entry. Click a text field in
+the embedded phone screen and continue typing directly on the PC keyboard, or
+use the text proxy on the right. Keeping Full Keyboard Access off provides the
+least surprising typing behavior because that separate iOS accessibility mode
+reserves several hardware-keyboard shortcuts.
+For text editing, **Hold / Select** keeps the primary pointer button down while
+you move across the video; Select All, Copy, and Paste emit their standard
+hardware-keyboard shortcuts. Submitted text stays in the local field until
+focus leaves it.
+
+The three system-action buttons are intentionally normal HID pointer buttons;
+iOS does not accept a generic third-party “Home” command. In **AssistiveTouch →
+Devices → AirPlayPC Input → Customize Additional Buttons**, press each desktop
+button when prompted and assign Button 2 to Home, Button 3 to App Switcher, and
+Button 4 to Spotlight. If the phone was paired to an earlier build, forget and
+re-pair AirPlayPC Input first so iOS refreshes the HID descriptor.
+
+AirPlayPC provides its own BlueZ pairing agent, so this works without a desktop
+Bluetooth applet. Only start Bluetooth input when you intend to pair. HID bonds
+are encrypted, but Bluetooth Just Works pairing has no man-in-the-middle
+verification, so a nearby device could pair during that window. As soon as the
+iPhone subscribes, AirPlayPC closes discoverable and pairable mode; exiting
+control restores the adapter's previous settings. Control reports are emitted
+only after a client subscribes, and the GTK window captures input only while it
+is focused. UxPlay 1.73 or newer with `-scrsv` and `-vrtp` support is required
+for the Arch application; startup and `doctor` report an actionable error for
+older or incompatible builds.
+
+This is an AssistiveTouch input device paired with a separate AirPlay video
+stream, not Apple's authenticated iPhone Mirroring protocol. The iPhone must
+remain unlocked and visible; Face ID, protected lock-screen entry, camera,
+microphone, clipboard integration, and true multitouch are not available.
+Apple documents the same Bluetooth pointer-device pairing path in its
+[AssistiveTouch guide](https://support.apple.com/en-gb/111775).
+
+## Install on Windows
 
 ### Option A — installer (recommended)
 
@@ -87,7 +220,7 @@ Then on the iPhone: **Control Center → Screen Mirroring → pick the PC**.
 > so 2.x cannot be used here and `setup.ps1` refuses it. See
 > [CLAUDE.md](CLAUDE.md#the-1x--2x-split--read-this-before-touching-setupps1).
 
-## The UI
+## The Windows UI
 
 `airplay-ui.ps1` is a self-contained WPF app over the same engine — device name,
 latency mode, resolution and framerate, fullscreen, the iPhone-style frame,
@@ -127,7 +260,7 @@ Reflector, a stale `uxplay`) and offers to close them. This matters: a second
 receiver holds port 7000 *and* advertises a second entry in the iPhone's
 mirroring list, so it's easy to pick the wrong one.
 
-## Usage
+## Windows usage
 
 ```powershell
 .\start-airplay.ps1                              # low-latency defaults
@@ -147,7 +280,7 @@ Defaults are tuned for **demos and app screen-sharing** — responsiveness over
 perfect A/V sync. Use `-Sync` when watching video, where lip-sync matters more
 than latency.
 
-## When it doesn't work
+## Troubleshooting on Windows
 
 Run `.\doctor.ps1 -PhoneIP <iphone-ip>` first. It checks, in the order these
 actually bite:
@@ -218,6 +351,14 @@ receiver. This is by design and can't be worked around.
 
 ## Ports
 
+On Arch, AirPlayPC defaults to the consecutive range **7000–7002 for both TCP
+and UDP**, plus UDP 5353 for mDNS. Those are the rules created for firewalld or
+UFW. `--dynamic-ports` removes the fixed UxPlay `-p` option; use it only when no
+host firewall is filtering inbound traffic. `--legacy-ports` uses UxPlay's
+non-consecutive legacy set instead and requires matching manual firewall rules.
+
+The Windows firewall setup covers the following ranges:
+
 | Port | Proto | Purpose |
 |---|---|---|
 | 7000, 7001, 7100 | TCP | AirPlay control / RTSP / mirroring |
@@ -240,6 +381,12 @@ H.264 decode active (`d3d11h264dec`), every tuned flag checked against
 `uxplay -h`. `doctor.ps1`, `setup.ps1 -WhatIf`, `start-airplay.ps1 -DryRun` and
 both `-SelfTest`s run clean end to end, and the UI and CLI produce identical
 engine arguments for the same settings.
+
+The Arch port is compile- and parser-tested against native upstream UxPlay
+1.74, with headless self-tests for shared argv construction, the GTK controller,
+and the frame geometry. Live discovery and mirroring still require a real LAN,
+graphical session, and iPhone; run `./doctor.sh` on the target Arch host before
+the first session.
 
 **CI**: every push runs the real `setup.ps1` flow on a clean GitHub runner —
 upstream release lookup, download, SHA-256 verification, silent install,

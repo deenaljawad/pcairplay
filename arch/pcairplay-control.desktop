@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AirPlayPC Mirror & Control
+Comment=Mirror and control an iPhone in one window
+Exec=pcairplay-control --start
+Icon=pcairplay
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=AirPlay;iPhone;mirror;AssistiveTouch;Bluetooth;mouse;keyboard;
+StartupNotify=true

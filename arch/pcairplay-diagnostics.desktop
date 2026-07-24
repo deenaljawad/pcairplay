@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AirPlayPC Diagnostics
+Comment=Check UxPlay, mDNS, GStreamer, network, ports, and firewall
+Exec=pcairplay doctor
+Icon=pcairplay
+Terminal=true
+Categories=System;
+Keywords=AirPlay;diagnostics;network;UxPlay;

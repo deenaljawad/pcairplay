@@ -7,6 +7,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  arch-port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # These tests intentionally need neither a display nor UxPlay. They pin
+      # the cross-entry-point argv contract and catch Python/shell regressions.
+      - name: Python syntax and shared argv self-test
+        run: |
+          python3 -m py_compile arch/*.py
+          python3 arch/pcairplay.py self-test
+          python3 arch/airplay-ui.py --self-test
+          python3 arch/frame-mirror.py --self-test
+          python3 arch/assistive-control.py --self-test
+
+      - name: Shell syntax and setup preview
+        run: |
+          for file in arch/setup.sh arch/PKGBUILD setup.sh start-airplay.sh doctor.sh AirPlayPC.sh AirPlayPC-Control.sh; do
+            bash -n "$file"
+          done
+          # setup correctly refuses non-Arch hosts; exercise its help parser here.
+          ./arch/setup.sh --help
+
   test:
     runs-on: windows-latest
     timeout-minutes: 30

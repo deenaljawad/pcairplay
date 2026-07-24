@@ -50,10 +50,16 @@ jobs:
                    'Framed Mirror.cmd', 'README.md', 'LICENSE', 'pcairplay.ico'
           Compress-Archive -Path $files -DestinationPath "AirPlayPC-${{ steps.ver.outputs.version }}.zip"
 
+      - name: Archive the Arch Linux port
+        shell: bash
+        run: |
+          tar -czf "AirPlayPC-${{ steps.ver.outputs.version }}-arch.tar.gz" \
+            arch setup.sh start-airplay.sh doctor.sh AirPlayPC.sh AirPlayPC-Control.sh README.md LICENSE
+
       - name: SHA256SUMS
         shell: powershell
         run: |
-          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item AirPlayPC-*.zip)
+          $items = @(Get-Item installer\Output\*.exe) + @(Get-Item AirPlayPC-*.zip) + @(Get-Item AirPlayPC-*-arch.tar.gz)
           $lines = foreach ($f in $items) {
             '{0}  {1}' -f (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $f.Name
           }
@@ -67,5 +73,6 @@ jobs:
         run: |
           $exe = (Get-Item installer\Output\*.exe).FullName
           $zip = (Get-Item AirPlayPC-*.zip).FullName
-          gh release create "${{ github.ref_name }}" $exe $zip SHA256SUMS.txt --title "AirPlayPC ${{ steps.ver.outputs.version }}" --generate-notes
+          $arch = (Get-Item AirPlayPC-*-arch.tar.gz).FullName
+          gh release create "${{ github.ref_name }}" $exe $zip $arch SHA256SUMS.txt --title "AirPlayPC ${{ steps.ver.outputs.version }}" --generate-notes
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

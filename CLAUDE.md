@@ -11,13 +11,15 @@ strand rules on existing installs), the `gbulog.pcairplay` AppUserModelID
 (pinned-taskbar identity), shared function names (`*-PCAirPlay*`), mutex
 names, and `pcairplay.ico` / `pcairplay.iss` file names.
 
-A thin Windows wrapper around **UxPlay**, an open-source AirPlay mirroring
-receiver. The goal: mirror an iPhone screen to a Windows PC using **native iOS
-Screen Mirroring**, with **no app installed on the iPhone**.
+A cross-platform desktop wrapper around **UxPlay**, an open-source AirPlay
+mirroring receiver. The original implementation targets Windows; the native
+`arch/` implementation targets Arch Linux and derivatives. The goal is to
+mirror an iPhone screen using **native iOS Screen Mirroring**, with **no app
+installed on the iPhone**.
 
 This repo contains no protocol code. UxPlay does the hard part (mDNS
 advertisement, RTSP, the FairPlay handshake, pair-verify, H.264 over RTP). What
-we add is the Windows glue that is otherwise fiddly and undocumented: install,
+we add is the platform glue that is otherwise fiddly and undocumented: install,
 firewall, mDNS prerequisites, sane low-latency defaults, and diagnostics.
 
 Machine-specific status (test-machine hostnames, LAN details, in-progress
@@ -25,9 +27,10 @@ debugging state) lives in **`CLAUDE.local.md`**, untracked and per-machine —
 if it exists next to this file, read it too. Keep anything personal or
 machine-identifying THERE, never here: this file is public.
 
-## Target environment
+## Target environments
 
-- **Home PC**: Windows, wired Ethernet.
+- **Windows PC**: Windows 10/11, commonly wired Ethernet.
+- **Arch PC**: Arch Linux or derivative, X11 or Wayland, native UxPlay 1.73+.
 - **iPhone**: on Wi-Fi, same router / same subnet as the PC.
 - This wired-PC / Wi-Fi-phone split is the intended setup and works, provided
   both are in one broadcast domain. See *Known pitfalls*.
@@ -51,6 +54,14 @@ machine-identifying THERE, never here: this file is public.
 | `pcairplay.ico` | The app icon — window/taskbar/tray, both shortcut sets, the setup exe, Apps & Features. **Regenerate with `tools/make-icon.ps1`, never hand-edit.** |
 | `tools/make-icon.ps1` | Vector-draws the icon with WPF and packs a proper multi-size .ico (256 px as a PNG entry, the rest as 32-bit BGRA BMP entries with AND masks). |
 | `tools/make-installer-art.ps1` | Vector-draws the installer's wizard bitmaps (`installer/wizard-*.bmp`: dark background, white AirPlay glyph, wordmark) that the .iss references. **Regenerate, never hand-edit the BMPs.** |
+| `arch/pcairplay_common.py` | Dependency-free shared Arch settings, XDG paths, engine argv, process, route, and package probes. **Arch entry points must use this argv builder.** |
+| `arch/pcairplay.py` | Arch CLI (`start`, `doctor`, `self-test`). Defaults to fixed TCP/UDP 7000–7002 so Linux firewall rules cover the actual engine sockets. |
+| `arch/airplay-ui.py` | GTK 4 controller with persistence, PIN display, engine/log lifecycle, status parsing, and single-instance behavior through `Gtk.Application`. |
+| `arch/frame-mirror.py` | X11-only phone bezel that tracks the native UxPlay window. Wayland mirroring works, but the frame is unavailable by compositor design. |
+| `arch/assistive-control.py` | Combined GTK mirror-and-control window: UxPlay forwards H.264 over loopback RTP into `gtk4paintablesink`, while its BLE HID-over-GATT server supplies an eight-button relative mouse, absolute video-surface pointer, keyboard, and horizontal-pan reports. Extra buttons are mapped to iOS actions in AssistiveTouch; direct typing uses the focused video surface and a Shift-Space compatibility shim for Full Keyboard Access. The in-widget cursor is captured by screen sharing. Embedded mode intentionally caps at 1080p H.264; normal UxPlay retains H.265/4K. |
+| `arch/setup.sh` | Arch setup/uninstall: repository/AUR/source UxPlay selection, GStreamer, conditional Avahi, firewalld/UFW, desktop and systemd-user integration. |
+| `arch/PKGBUILD` | Optional system-wide `pcairplay-git` packaging route. |
+| `setup.sh`, `start-airplay.sh`, `doctor.sh`, `AirPlayPC.sh`, `AirPlayPC-Control.sh` | Top-level Arch convenience launchers. |
 
 `uxplay-common.ps1` is dot-sourced by all five scripts (including
 `frame-mirror.ps1`, which runs it under StrictMode 3 — keep it strict-clean)

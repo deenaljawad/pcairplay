@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AirPlayPC
+Comment=Mirror an iPhone or iPad with native AirPlay Screen Mirroring
+Exec=pcairplay-ui
+Icon=pcairplay
+Terminal=false
+Categories=AudioVideo;
+Keywords=AirPlay;iPhone;mirror;screen;UxPlay;
+StartupNotify=true
